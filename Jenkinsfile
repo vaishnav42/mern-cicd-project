@@ -2,8 +2,13 @@ pipeline {
     agent any
 
     environment {
-        BACKEND_IMAGE = "mern-backend"
-        FRONTEND_IMAGE = "mern-frontend"
+        DOCKER_BACKEND = "vaishnav1133/mern-backend:latest"
+        DOCKER_FRONTEND = "vaishnav1133/mern-frontend:latest"
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
     }
 
     stages {
@@ -14,7 +19,7 @@ pipeline {
             }
         }
 
-        stage('Backend Dependencies') {
+        stage('Install Backend Dependencies') {
             steps {
                 dir('backend') {
                     bat 'npm install'
@@ -22,7 +27,7 @@ pipeline {
             }
         }
 
-        stage('Frontend Dependencies') {
+        stage('Install Frontend Dependencies') {
             steps {
                 dir('frontend') {
                     bat 'npm install'
@@ -38,6 +43,30 @@ pipeline {
             }
         }
 
+        stage('Backend Test') {
+            steps {
+                dir('backend') {
+                    bat 'npm test'
+                }
+            }
+        }
+
+        stage('Frontend Lint') {
+            steps {
+                dir('frontend') {
+                    bat 'npm run lint'
+                }
+            }
+        }
+
+        stage('Frontend Test') {
+            steps {
+                dir('frontend') {
+                    bat 'npm test'
+                }
+            }
+        }
+
         stage('Frontend Build') {
             steps {
                 dir('frontend') {
@@ -46,37 +75,54 @@ pipeline {
             }
         }
 
-        stage('Backend Tests') {
+        stage('Docker Login') {
             steps {
-                dir('backend') {
-                    bat 'npm test'
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    bat 'docker login -u %DOCKER_USER% -p %DOCKER_PASS%'
                 }
             }
         }
 
-        stage('Frontend Tests') {
+        stage('Build Docker Images') {
             steps {
-                dir('frontend') {
-                    bat 'npm test'
-                }
+                bat 'docker build -t %DOCKER_BACKEND% backend'
+                bat 'docker build -t %DOCKER_FRONTEND% frontend'
             }
         }
 
-        stage('Docker Build') {
+        stage('Push Docker Images') {
             steps {
-                bat 'docker compose build'
+                bat 'docker push %DOCKER_BACKEND%'
+                bat 'docker push %DOCKER_FRONTEND%'
             }
         }
 
-        stage('Docker Deploy') {
+        stage('Deploy Application') {
             steps {
-                bat 'docker compose up -d'
+                bat 'docker compose down'
+                bat 'docker compose up -d --build'
             }
         }
 
-        stage('Docker Status') {
+        stage('Verify Running Containers') {
             steps {
                 bat 'docker ps'
+            }
+        }
+
+        stage('Backend Health Check') {
+            steps {
+                bat 'curl http://localhost:5000'
+            }
+        }
+
+        stage('Frontend Health Check') {
+            steps {
+                bat 'curl http://localhost:5173'
             }
         }
     }
