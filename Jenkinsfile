@@ -1,15 +1,20 @@
 pipeline {
     agent any
 
+    environment {
+        BACKEND_IMAGE = "mern-backend"
+        FRONTEND_IMAGE = "mern-frontend"
+    }
+
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Source') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Install Backend Dependencies') {
+        stage('Backend Dependencies') {
             steps {
                 dir('backend') {
                     bat 'npm install'
@@ -17,7 +22,7 @@ pipeline {
             }
         }
 
-        stage('Install Frontend Dependencies') {
+        stage('Frontend Dependencies') {
             steps {
                 dir('frontend') {
                     bat 'npm install'
@@ -25,16 +30,74 @@ pipeline {
             }
         }
 
-        stage('Build Backend Docker Image') {
+        stage('Backend Build') {
             steps {
-                bat 'docker build -t mern-backend ./backend'
+                dir('backend') {
+                    bat 'npm run build'
+                }
             }
         }
 
-        stage('Build Frontend Docker Image') {
+        stage('Frontend Build') {
             steps {
-                bat 'docker build -t mern-frontend ./frontend'
+                dir('frontend') {
+                    bat 'npm run build'
+                }
             }
+        }
+
+        stage('Backend Tests') {
+            steps {
+                dir('backend') {
+                    bat 'npm test'
+                }
+            }
+        }
+
+        stage('Frontend Tests') {
+            steps {
+                dir('frontend') {
+                    bat 'npm test'
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                bat 'docker compose build'
+            }
+        }
+
+        stage('Docker Deploy') {
+            steps {
+                bat 'docker compose up -d'
+            }
+        }
+
+        stage('Docker Status') {
+            steps {
+                bat 'docker ps'
+            }
+        }
+    }
+
+    post {
+
+        success {
+            echo '==========================================='
+            echo ' CI/CD Pipeline Completed Successfully!'
+            echo '==========================================='
+        }
+
+        failure {
+            echo '==========================================='
+            echo ' Pipeline Failed!'
+            echo ' Check Console Output for Details.'
+            echo '==========================================='
+        }
+
+        always {
+            cleanWs()
         }
     }
 }

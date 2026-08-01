@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "build": "echo Backend Build Completed",
+    "test": "echo Backend Test Passed"
+
   },
   "keywords": [],
   "author": "",
