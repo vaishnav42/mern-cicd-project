@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'NodeJS-22'
+    }
+
     stages {
 
         stage('Checkout') {
@@ -9,7 +13,7 @@ pipeline {
             }
         }
 
-        stage('Install Backend') {
+        stage('Install Backend Dependencies') {
             steps {
                 dir('backend') {
                     bat 'npm install'
@@ -17,7 +21,7 @@ pipeline {
             }
         }
 
-        stage('Install Frontend') {
+        stage('Install Frontend Dependencies') {
             steps {
                 dir('frontend') {
                     bat 'npm install'
@@ -25,10 +29,31 @@ pipeline {
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Build Backend Docker Image') {
             steps {
-                bat 'docker compose build'
+                bat 'docker build -t mern-backend ./backend'
             }
+        }
+
+        stage('Build Frontend Docker Image') {
+            steps {
+                bat 'docker build -t mern-frontend ./frontend'
+            }
+        }
+
+        stage('Docker Compose') {
+            steps {
+                bat 'docker compose up -d'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'CI/CD Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check the Console Output.'
         }
     }
 }
