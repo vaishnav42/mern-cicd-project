@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs 'NodeJS-22'
-    }
-
     stages {
 
         stage('Checkout') {
@@ -39,21 +35,6 @@ pipeline {
             steps {
                 bat 'docker build -t mern-frontend ./frontend'
             }
-        }
-
-        stage('Docker Compose') {
-            steps {
-                bat 'docker compose up -d'
-            }
-        }
-    }
-
-    post {
-        success {
-            echo 'CI/CD Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed. Check the Console Output.'
         }
     }
 }
