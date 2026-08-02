@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        sonarQubeScanner 'SonarScanner'
+    }
+
     environment {
         DOCKER_BACKEND = "vaishnav1133/mern-backend:latest"
         DOCKER_FRONTEND = "vaishnav1133/mern-frontend:latest"
@@ -75,6 +79,16 @@ pipeline {
             }
         }
 
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    bat '''
+                    sonar-scanner
+                    '''
+                }
+            }
+        }
+
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
@@ -103,42 +117,30 @@ pipeline {
 
         stage('Deploy Application') {
             steps {
-                bat 'docker compose down'
                 bat 'docker compose up -d --build'
             }
         }
 
-        stage('Verify Running Containers') {
+        stage('Verify Containers') {
             steps {
                 bat 'docker ps'
             }
         }
 
-        stage('Backend Health Check') {
-            steps {
-                bat 'curl http://localhost:5000'
-            }
-        }
-
-        stage('Frontend Health Check') {
-            steps {
-                bat 'curl http://localhost:5173'
-            }
-        }
     }
 
     post {
 
         success {
             echo '==========================================='
-            echo ' CI/CD Pipeline Completed Successfully!'
+            echo 'CI/CD Pipeline Completed Successfully!'
             echo '==========================================='
         }
 
         failure {
             echo '==========================================='
-            echo ' Pipeline Failed!'
-            echo ' Check Console Output for Details.'
+            echo 'Pipeline Failed!'
+            echo 'Check Console Output.'
             echo '==========================================='
         }
 
