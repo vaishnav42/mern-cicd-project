@@ -26,7 +26,7 @@ pipeline {
         stage('Install Backend Dependencies') {
             steps {
                 dir('backend') {
-                    bat 'npm install'
+                    sh 'npm install'
                 }
             }
         }
@@ -34,7 +34,7 @@ pipeline {
         stage('Install Frontend Dependencies') {
             steps {
                 dir('frontend') {
-                    bat 'npm install'
+                    sh 'npm install'
                 }
             }
         }
@@ -42,7 +42,7 @@ pipeline {
         stage('Backend Build') {
             steps {
                 dir('backend') {
-                    bat 'npm run build'
+                    sh 'npm run build'
                 }
             }
         }
@@ -50,7 +50,7 @@ pipeline {
         stage('Backend Test') {
             steps {
                 dir('backend') {
-                    bat 'npm test'
+                    sh 'npm test'
                 }
             }
         }
@@ -58,7 +58,7 @@ pipeline {
         stage('Frontend Lint') {
             steps {
                 dir('frontend') {
-                    bat 'npm run lint'
+                    sh 'npm run lint'
                 }
             }
         }
@@ -66,7 +66,7 @@ pipeline {
         stage('Frontend Test') {
             steps {
                 dir('frontend') {
-                    bat 'npm test'
+                    sh 'npm test'
                 }
             }
         }
@@ -74,7 +74,7 @@ pipeline {
         stage('Frontend Build') {
             steps {
                 dir('frontend') {
-                    bat 'npm run build'
+                    sh 'npm run build'
                 }
             }
         }
@@ -82,9 +82,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    bat '''
-                    sonar-scanner
-                    '''
+                    sh 'sonar-scanner'
                 }
             }
         }
@@ -96,41 +94,39 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    bat 'docker login -u %DOCKER_USER% -p %DOCKER_PASS%'
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
                 }
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                bat 'docker build -t %DOCKER_BACKEND% backend'
-                bat 'docker build -t %DOCKER_FRONTEND% frontend'
+                sh 'docker build -t $DOCKER_BACKEND backend'
+                sh 'docker build -t $DOCKER_FRONTEND frontend'
             }
         }
 
         stage('Push Docker Images') {
             steps {
-                bat 'docker push %DOCKER_BACKEND%'
-                bat 'docker push %DOCKER_FRONTEND%'
+                sh 'docker push $DOCKER_BACKEND'
+                sh 'docker push $DOCKER_FRONTEND'
             }
         }
 
         stage('Deploy Application') {
             steps {
-                bat 'docker compose up -d --build'
+                sh 'docker compose up -d --build'
             }
         }
 
-        stage('Verify Containers') {
+        stage('Verify Running Containers') {
             steps {
-                bat 'docker ps'
+                sh 'docker ps'
             }
         }
-
     }
 
     post {
-
         success {
             echo '==========================================='
             echo 'CI/CD Pipeline Completed Successfully!'
@@ -140,7 +136,7 @@ pipeline {
         failure {
             echo '==========================================='
             echo 'Pipeline Failed!'
-            echo 'Check Console Output.'
+            echo 'Check the Console Output for details.'
             echo '==========================================='
         }
 
