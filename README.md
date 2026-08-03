@@ -200,7 +200,7 @@ The Jenkins pipeline performs the following stages:
 ## Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/mern-cicd-project.git
+git clone https://github.com/vaishnav42/mern-cicd-project.git
 
 cd mern-cicd-project
 ```
