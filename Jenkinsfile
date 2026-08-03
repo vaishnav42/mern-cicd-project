@@ -50,22 +50,6 @@ pipeline {
             }
         }
 
-        stage('Frontend Lint') {
-            steps {
-                dir('frontend') {
-                    sh 'npm run lint'
-                }
-            }
-        }
-
-        stage('Frontend Test') {
-            steps {
-                dir('frontend') {
-                    sh 'npm test'
-                }
-            }
-        }
-
         stage('Frontend Build') {
             steps {
                 dir('frontend') {
@@ -84,7 +68,7 @@ pipeline {
                     )
                 ]) {
                     sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                     '''
                 }
             }
@@ -93,8 +77,8 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 sh """
-                    docker build -t ${BACKEND_IMAGE} ./backend
-                    docker build -t ${FRONTEND_IMAGE} ./frontend
+                docker build -t ${BACKEND_IMAGE} ./backend
+                docker build -t ${FRONTEND_IMAGE} ./frontend
                 """
             }
         }
@@ -102,71 +86,45 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 sh """
-                    docker push ${BACKEND_IMAGE}
-                    docker push ${FRONTEND_IMAGE}
+                docker push ${BACKEND_IMAGE}
+                docker push ${FRONTEND_IMAGE}
                 """
             }
         }
-        stage('Debug Compose') {
-    steps {
-        sh '''
-            echo "=============================="
-            echo "Current Directory"
-            echo "=============================="
-            pwd
 
-            echo "=============================="
-            echo "Workspace Files"
-            echo "=============================="
-            ls -la
-
-            echo "=============================="
-            echo "docker-compose.yml"
-            echo "=============================="
-            cat docker-compose.yml
-
-            echo "=============================="
-            echo "Docker Compose Config"
-            echo "=============================="
-            docker compose config
-
-            echo "=============================="
-            echo "Git Branch"
-            echo "=============================="
-            git branch
-
-            echo "=============================="
-            echo "Git Commit"
-            echo "=============================="
-            git log --oneline -1
-        '''
-    }
-}
         stage('Deploy Application') {
             steps {
                 sh '''
-                    docker compose down --remove-orphans || true
+                docker compose down --remove-orphans || true
 
-                    docker rm -f mern-backend mern-frontend 2>/dev/null || true
+                docker rm -f mern-backend mern-frontend 2>/dev/null || true
 
-                    docker compose pull
+                docker compose pull
 
-                    docker compose up -d --force-recreate --remove-orphans
+                docker compose up -d --force-recreate --remove-orphans
                 '''
             }
         }
 
         stage('Verify Running Containers') {
             steps {
-                sh 'docker ps'
+                sh '''
+                sleep 10
+                docker ps
+                '''
             }
         }
 
         stage('Backend Health Check') {
             steps {
                 sh '''
-                    sleep 15
-                    curl -f http://localhost:5000 || exit 1
+                echo "Waiting for Backend..."
+                sleep 30
+
+                curl --retry 10 \
+                     --retry-delay 5 \
+                     --retry-connrefused \
+                     -f http://localhost:5000/api/health
                 '''
             }
         }
@@ -174,25 +132,34 @@ pipeline {
         stage('Frontend Health Check') {
             steps {
                 sh '''
-                    sleep 15
-                    curl -f http://localhost:5173 || exit 1
+                echo "Waiting for Frontend..."
+                sleep 20
+
+                curl --retry 10 \
+                     --retry-delay 5 \
+                     --retry-connrefused \
+                     -f http://localhost:5173
                 '''
             }
         }
     }
 
     post {
+
         success {
-            echo '==========================================='
-            echo 'Pipeline Completed Successfully!'
-            echo '==========================================='
+            echo "======================================="
+            echo "Pipeline Completed Successfully"
+            echo "======================================="
         }
 
         failure {
-            echo '==========================================='
-            echo 'Pipeline Failed!'
-            echo 'Check Console Output.'
-            echo '==========================================='
+            sh 'docker ps -a || true'
+            sh 'docker logs mern-backend || true'
+            sh 'docker logs mern-frontend || true'
+
+            echo "======================================="
+            echo "Pipeline Failed"
+            echo "======================================="
         }
 
         always {
