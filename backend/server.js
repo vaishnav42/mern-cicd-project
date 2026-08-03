@@ -6,22 +6,12 @@ import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("✅ MongoDB Connected Successfully");
-  } catch (error) {
-    console.error("❌ MongoDB Connection Failed:", error.message);
-    process.exit(1);
-  }
-};
-
-connectDB();
-
 const app = express();
 
-// Middleware
+// Security
+app.disable("x-powered-by");
 
+// Middleware
 app.use(express.json());
 app.use(cors());
 
@@ -30,22 +20,41 @@ app.use("/api/users", userRoutes);
 
 // Home Route
 app.get("/", (req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
-    message: "Welcome to MERN CI/CD Backend API 🚀",
+    message: "Welcome to MERN CI/CD Backend API 🚀"
   });
 });
 
-// Health Route
+// Health Check Route
 app.get("/api/health", (req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
-    status: "Server is running",
+    status: "Backend is running"
   });
 });
 
 const PORT = process.env.PORT || 5000;
+const MONGODB_URI = process.env.MONGODB_URI;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+async function startServer() {
+  try {
+    if (!MONGODB_URI) {
+      throw new Error("MONGODB_URI is not defined in environment variables.");
+    }
+
+    await mongoose.connect(MONGODB_URI);
+
+    console.log("✅ MongoDB Connected Successfully");
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+
+  } catch (error) {
+    console.error("❌ MongoDB Connection Failed:", error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
