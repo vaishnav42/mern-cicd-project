@@ -76,11 +76,13 @@ pipeline {
 
         stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                     '''
@@ -105,15 +107,20 @@ pipeline {
                 """
             }
         }
+
         stage('Deploy Application') {
-    steps {
-        sh '''
-            docker compose down || true
-            docker compose pull
-            docker compose up -d
-        '''
-    }
-}
+            steps {
+                sh '''
+                    docker compose down --remove-orphans || true
+
+                    docker rm -f mern-backend mern-frontend 2>/dev/null || true
+
+                    docker compose pull
+
+                    docker compose up -d --force-recreate --remove-orphans
+                '''
+            }
+        }
 
         stage('Verify Running Containers') {
             steps {
@@ -141,7 +148,6 @@ pipeline {
     }
 
     post {
-
         success {
             echo '==========================================='
             echo 'Pipeline Completed Successfully!'
