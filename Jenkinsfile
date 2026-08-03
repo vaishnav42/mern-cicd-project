@@ -107,7 +107,41 @@ pipeline {
                 """
             }
         }
+        stage('Debug Compose') {
+    steps {
+        sh '''
+            echo "=============================="
+            echo "Current Directory"
+            echo "=============================="
+            pwd
 
+            echo "=============================="
+            echo "Workspace Files"
+            echo "=============================="
+            ls -la
+
+            echo "=============================="
+            echo "docker-compose.yml"
+            echo "=============================="
+            cat docker-compose.yml
+
+            echo "=============================="
+            echo "Docker Compose Config"
+            echo "=============================="
+            docker compose config
+
+            echo "=============================="
+            echo "Git Branch"
+            echo "=============================="
+            git branch
+
+            echo "=============================="
+            echo "Git Commit"
+            echo "=============================="
+            git log --oneline -1
+        '''
+    }
+}
         stage('Deploy Application') {
             steps {
                 sh '''
