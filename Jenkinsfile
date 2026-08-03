@@ -68,7 +68,7 @@ pipeline {
                     )
                 ]) {
                     sh '''
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                     '''
                 }
             }
@@ -77,8 +77,8 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 sh """
-                docker build -t ${BACKEND_IMAGE} ./backend
-                docker build -t ${FRONTEND_IMAGE} ./frontend
+                    docker build -t ${BACKEND_IMAGE} ./backend
+                    docker build -t ${FRONTEND_IMAGE} ./frontend
                 """
             }
         }
@@ -86,8 +86,8 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 sh """
-                docker push ${BACKEND_IMAGE}
-                docker push ${FRONTEND_IMAGE}
+                    docker push ${BACKEND_IMAGE}
+                    docker push ${FRONTEND_IMAGE}
                 """
             }
         }
@@ -95,13 +95,13 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 sh '''
-                docker compose down --remove-orphans || true
+                    docker compose down --remove-orphans || true
 
-                docker rm -f mern-backend mern-frontend 2>/dev/null || true
+                    docker rm -f mern-backend mern-frontend 2>/dev/null || true
 
-                docker compose pull
+                    docker compose pull
 
-                docker compose up -d --force-recreate --remove-orphans
+                    docker compose up -d --force-recreate --remove-orphans
                 '''
             }
         }
@@ -109,8 +109,8 @@ pipeline {
         stage('Verify Running Containers') {
             steps {
                 sh '''
-                sleep 10
-                docker ps
+                    sleep 10
+                    docker ps
                 '''
             }
         }
@@ -118,13 +118,20 @@ pipeline {
         stage('Backend Health Check') {
             steps {
                 sh '''
-                echo "Waiting for Backend..."
-                sleep 30
+                    echo "Waiting for Backend..."
 
-                curl --retry 10 \
-                     --retry-delay 5 \
-                     --retry-connrefused \
-                     -f http://localhost:5000/api/health
+                    for i in $(seq 1 30); do
+                        if curl -fs http://host.docker.internal:5000/api/health; then
+                            echo "Backend is healthy"
+                            exit 0
+                        fi
+
+                        echo "Retry $i..."
+                        sleep 2
+                    done
+
+                    echo "Backend Health Check Failed"
+                    exit 1
                 '''
             }
         }
@@ -132,13 +139,20 @@ pipeline {
         stage('Frontend Health Check') {
             steps {
                 sh '''
-                echo "Waiting for Frontend..."
-                sleep 20
+                    echo "Waiting for Frontend..."
 
-                curl --retry 10 \
-                     --retry-delay 5 \
-                     --retry-connrefused \
-                     -f http://localhost:5173
+                    for i in $(seq 1 30); do
+                        if curl -fs http://host.docker.internal:5173; then
+                            echo "Frontend is healthy"
+                            exit 0
+                        fi
+
+                        echo "Retry $i..."
+                        sleep 2
+                    done
+
+                    echo "Frontend Health Check Failed"
+                    exit 1
                 '''
             }
         }
@@ -147,9 +161,9 @@ pipeline {
     post {
 
         success {
-            echo "======================================="
+            echo "======================================"
             echo "Pipeline Completed Successfully"
-            echo "======================================="
+            echo "======================================"
         }
 
         failure {
@@ -157,9 +171,9 @@ pipeline {
             sh 'docker logs mern-backend || true'
             sh 'docker logs mern-frontend || true'
 
-            echo "======================================="
+            echo "======================================"
             echo "Pipeline Failed"
-            echo "======================================="
+            echo "======================================"
         }
 
         always {
