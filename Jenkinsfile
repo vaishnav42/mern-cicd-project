@@ -2,13 +2,12 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_BACKEND = "vaishnav1133/mern-backend:latest"
-        DOCKER_FRONTEND = "vaishnav1133/mern-frontend:latest"
+        BACKEND_IMAGE = "vaishnav1133/mern-backend:latest"
+        FRONTEND_IMAGE = "vaishnav1133/mern-frontend:latest"
     }
 
     options {
         timestamps()
-        disableConcurrentBuilds()
     }
 
     stages {
@@ -83,9 +82,7 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                    echo "$DOCKER_PASS" | docker login \
-                    -u "$DOCKER_USER" \
-                    --password-stdin
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                     '''
                 }
             }
@@ -93,23 +90,30 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
-                sh 'docker build -t $DOCKER_BACKEND backend'
-                sh 'docker build -t $DOCKER_FRONTEND frontend'
+                sh """
+                    docker build -t ${BACKEND_IMAGE} ./backend
+                    docker build -t ${FRONTEND_IMAGE} ./frontend
+                """
             }
         }
 
         stage('Push Docker Images') {
             steps {
-                sh 'docker push $DOCKER_BACKEND'
-                sh 'docker push $DOCKER_FRONTEND'
+                sh """
+                    docker push ${BACKEND_IMAGE}
+                    docker push ${FRONTEND_IMAGE}
+                """
             }
         }
-
         stage('Deploy Application') {
-            steps {
-               sh 'docker compose up -d'
-            }
-        }
+    steps {
+        sh '''
+            docker compose down || true
+            docker compose pull
+            docker compose up -d
+        '''
+    }
+}
 
         stage('Verify Running Containers') {
             steps {
@@ -119,13 +123,19 @@ pipeline {
 
         stage('Backend Health Check') {
             steps {
-                sh 'curl -f http://localhost:5000 || exit 1'
+                sh '''
+                    sleep 15
+                    curl -f http://localhost:5000 || exit 1
+                '''
             }
         }
 
         stage('Frontend Health Check') {
             steps {
-                sh 'curl -f http://localhost:5173 || exit 1'
+                sh '''
+                    sleep 15
+                    curl -f http://localhost:5173 || exit 1
+                '''
             }
         }
     }
