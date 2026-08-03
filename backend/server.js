@@ -37,6 +37,8 @@ app.get("/api/health", (req, res) => {
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
+console.log("MONGODB_URI =", MONGODB_URI);
+
 async function startServer() {
   try {
     if (!MONGODB_URI) {
@@ -46,7 +48,7 @@ async function startServer() {
     await mongoose.connect(MONGODB_URI);
 
     console.log("✅ MongoDB Connected Successfully");
-
+  
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
@@ -56,5 +58,4 @@ async function startServer() {
     process.exit(1);
   }
 }
-
 startServer();
